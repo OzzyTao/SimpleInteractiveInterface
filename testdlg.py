@@ -34,7 +34,7 @@ class TestDlg(QDialog):
 		self.savebutton.pressed.connect(self.saveMatrix)
 		self.loadbutton.pressed.connect(self.loadMatrix)
 		self.myscene.selectionChanged.connect(self.updateStatus)
-		self.renderbutton.pressed.connect(self.testDistance)
+		# self.renderbutton.pressed.connect(self.testDistance)
 
 	def testDistance(self):
 		print "Toplogical Distance:",self.mymodel.toplogicalDistance(1,10)
