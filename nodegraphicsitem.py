@@ -26,28 +26,14 @@ class NodeGraphicsItem(QGraphicsItem):
 			self._resizable = True
 			self.setResizeHandle()
 
-		# if model.isLeaf():
-		# 	self._rect = QRectF(-NodeGraphicsItem.LEAFSIZE[0]/2,-NodeGraphicsItem.LEAFSIZE[1]/2,*NodeGraphicsItem.LEAFSIZE)
-		# 	self._resizable = False
-		# elif model.rect:
-		# 	self._rect = model.rect
-		# 	self._resizable =True
-		# 	self.setResizeHandle()
-		# else:
-		# 	self._rect = QRectF(-NodeGraphicsItem.PARENTSIZE[0]/2,-NodeGraphicsItem.PARENTSIZE[1]/2,*NodeGraphicsItem.PARENTSIZE)
-		# 	self._resizable = True
-		# 	self.setResizeHandle()
-
 		if model.pos:
 			self.setPos(model.pos)
+		else:
+			self.model.pos = QPointF(0,0)
 
 		if not model.color:
 			self.model.color = QColor(qrand()%256,qrand()%256,qrand()%256) if model.isLeaf() else QColor(Qt.lightGray)
-		# if model.color:
-		# 	self._color = model.color
-		# else:
-		# 	self._color = QColor(qrand()%256,qrand()%256,qrand()%256) if model.isLeaf() else Qt.lightGray
-		# recurcively load a model
+
 		if not model.isLeaf():
 			for child in model.children:
 				childitem = NodeGraphicsItem(child,self)
@@ -69,7 +55,9 @@ class NodeGraphicsItem(QGraphicsItem):
 			pen.setWidth(1)
 			pen.setColor(Qt.gray)
 		painter.setPen(pen)
-		painter.setBrush(QBrush(self.model.color))
+		color = QColor(self.model.color)
+		color.setAlphaF(self.model.accu)
+		painter.setBrush(QBrush(color))
 		painter.drawRoundedRect(drawingRect,5,5)
 		painter.setPen(Qt.SolidLine)
 		painter.drawText(drawingRect,str(self.model.classid),QTextOption(Qt.AlignCenter))
@@ -122,10 +110,13 @@ class NodeGraphicsItem(QGraphicsItem):
 
 	def itemChange(self,change,value):
 		if change == QGraphicsItem.ItemSelectedHasChanged and self._resizable:
-			self.enableHandle(value.toBool())
+			if isinstance(value,int):
+				self.enableHandle(value)
+			else:
+				self.enableHandle(value.toBool())
 		elif change == QGraphicsItem.ItemPositionChange:
 			previousPos = self.pos()
-			value = value.toPointF()
+			value = value if isinstance(value,QPointF) else value.toPointF()
 			# check possible collision with parent and siblings
 			if self.parentItem():
 				#leaf classes
@@ -144,19 +135,12 @@ class NodeGraphicsItem(QGraphicsItem):
 					y = mappedParentRect.bottom()-NodeGraphicsItem.LEAFSIZE[1]/2
 				value  = QPointF(x,y)
 
-			# collidingItems = self.collidingItems()
-			# for item in collidingItems:
-			# 	if item.parentItem()!=self and self.parentItem()!=item:
-			# 		value = previousPos
 		elif change == QGraphicsItem.ItemPositionHasChanged:
-			self.model.pos = value.toPointF()
+			self.model.pos = value if isinstance(value,QPointF) else value.toPointF()
 
 		return super(NodeGraphicsItem,self).itemChange(change,value)
 
-	# def updateModel(self):
-	# 	self.model.rect = self.boundingRect()
-	# 	self.model.pos = self.pos()
-	# 	self.model.color = self._color
+
 
 
 

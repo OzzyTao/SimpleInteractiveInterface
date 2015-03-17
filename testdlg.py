@@ -1,16 +1,18 @@
 from PyQt4.QtGui import QDialog, QVBoxLayout, QGraphicsScene, QGraphicsView, QHBoxLayout, QPushButton, QFileDialog, QStatusBar
-from PyQt4.QtCore import QRectF
+from PyQt4.QtCore import QRectF, pyqtSignal
 from data import data
 from treenode import TreeNode
 from nodegraphicsitem import NodeGraphicsItem
 import json
+from dragenabledscene import DragEnabledScene
 
 class TestDlg(QDialog):
 	"""docstring for TestDlg"""
+	classDefChanged = pyqtSignal()
 	def __init__(self, parent=None):
 		super(TestDlg, self).__init__(parent)
 		self.mymodel = None
-		self.myscene = QGraphicsScene(QRectF(-400,-300,800,600))
+		self.myscene = DragEnabledScene(QRectF(-400,-300,800,600))
 		self.myview = QGraphicsView()
 		self.myview.setScene(self.myscene)
 		self.myfile = None
@@ -34,11 +36,17 @@ class TestDlg(QDialog):
 		self.savebutton.pressed.connect(self.saveMatrix)
 		self.loadbutton.pressed.connect(self.loadMatrix)
 		self.myscene.selectionChanged.connect(self.updateStatus)
-		# self.renderbutton.pressed.connect(self.testDistance)
+		self.myscene.modelchanged.connect(self.changeModel)
+
+		self.renderbutton.pressed.connect(self.testDistance)
 
 	def testDistance(self):
 		print "Toplogical Distance:",self.mymodel.toplogicalDistance(1,10)
 		print "Matrix Distance:",self.mymodel.matrixDistance(1,10)
+		print "Posibility:", self.mymodel.transactionPossibility(1,10)
+
+	def changeModel(self):
+		self.classDefChanged.emit()
 
 	def updateStatus(self):
 		items = self.myscene.selectedItems()
@@ -53,7 +61,7 @@ class TestDlg(QDialog):
 		for key in data:
 			parentNode = TreeNode(tempid,key,parent=rootNode)
 			for leaf in data[key]:
-				leafNode = TreeNode(leaf[0],leaf[1],parent=parentNode)
+				leafNode = TreeNode(leaf[0],leaf[1],color=leaf[2],accu=leaf[3],parent=parentNode)
 			tempid += 1
 		self.mymodel = rootNode
 
@@ -79,16 +87,17 @@ class TestDlg(QDialog):
 			self.myfile = fname
 			with open(fname,'r') as loadfile:
 				rawobj = json.loads(loadfile.read())
-				rootNode = TreeNode(rawobj['id'],rawobj['name'],rawobj['rect'],rawobj['color'],rawobj['pos'])
+				rootNode = TreeNode(rawobj['id'],rawobj['name'],rawobj['rect'],rawobj['color'],rawobj['pos'],rawobj['accu'])
 				for child in rawobj['children']:
-					parentNode = TreeNode(child['id'],child['name'],child['rect'],child['color'],child['pos'],rootNode)
+					parentNode = TreeNode(child['id'],child['name'],child['rect'],child['color'],child['pos'],child['accu'],rootNode)
 					for leaf in child['children']:
-						leafNode = TreeNode(leaf['id'],leaf['name'],leaf['rect'],leaf['color'],leaf['pos'],parentNode)
+						leafNode = TreeNode(leaf['id'],leaf['name'],leaf['rect'],leaf['color'],leaf['pos'],leaf['accu'],parentNode)
 				self.mymodel = rootNode
 
 				self.myscene.clear()
 				for node in self.mymodel.children:
 					self.myscene.addItem(NodeGraphicsItem(node))
+		self.changeModel()
 
 
 
