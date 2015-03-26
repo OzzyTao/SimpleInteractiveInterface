@@ -1,4 +1,4 @@
-from PyQt4.QtGui import QDialog, QVBoxLayout, QGraphicsScene, QGraphicsView, QHBoxLayout, QPushButton, QFileDialog, QStatusBar
+from PyQt4.QtGui import QDialog, QVBoxLayout, QGraphicsScene, QGraphicsView, QHBoxLayout, QPushButton, QFileDialog, QStatusBar, QAction, QMenuBar, QKeySequence
 from PyQt4.QtCore import QRectF, pyqtSignal
 from data import data
 from treenode import TreeNode
@@ -12,40 +12,78 @@ class TestDlg(QDialog):
 	def __init__(self, parent=None):
 		super(TestDlg, self).__init__(parent)
 		self.mymodel = None
+		self.proxyModel = []
 		self.myscene = DragEnabledScene(QRectF(-400,-300,800,600))
 		self.myview = QGraphicsView()
 		self.myview.setScene(self.myscene)
 		self.myfile = None
 		layout = QVBoxLayout()
 		layout.addWidget(self.myview)
-		buttonLayout = QHBoxLayout()
-		self.savebutton = QPushButton('Save')
-		self.loadbutton = QPushButton('Load')
-		self.renderbutton = QPushButton('Accept')
-		buttonLayout.addWidget(self.savebutton)
-		buttonLayout.addWidget(self.loadbutton)
-		buttonLayout.addWidget(self.renderbutton)
-		layout.addLayout(buttonLayout)
+		# buttonLayout = QHBoxLayout()
+		# self.savebutton = QPushButton('Save')
+		# self.loadbutton = QPushButton('Load')
+		# self.renderbutton = QPushButton('Accept')
+		# buttonLayout.addWidget(self.savebutton)
+		# buttonLayout.addWidget(self.loadbutton)
+		# buttonLayout.addWidget(self.renderbutton)
+		# layout.addLayout(buttonLayout)
 		self.statusbar =  QStatusBar()
 		layout.addWidget(self.statusbar)
 		self.statusbar.showMessage("Ready.",2000)
 		self.setLayout(layout)
 
-		self.loadfromInitData()
+		self.menuBar = QMenuBar(self)
+		self.set_menubar()
 
-		self.savebutton.pressed.connect(self.saveMatrix)
-		self.loadbutton.pressed.connect(self.loadMatrix)
+		# self.savebutton.pressed.connect(self.saveMatrix)
+		# self.loadbutton.pressed.connect(self.loadMatrix)
 		self.myscene.selectionChanged.connect(self.updateStatus)
 		self.myscene.modelchanged.connect(self.changeModel)
 
-		self.renderbutton.pressed.connect(self.testDistance)
+		# self.renderbutton.pressed.connect(self.testDistance)
+		self.setWindowTitle("Class Relation Metaphor")
+		self.loadfromInitData()
 
-	def testDistance(self):
-		print "Toplogical Distance:",self.mymodel.toplogicalDistance(1,10)
-		print "Matrix Distance:",self.mymodel.matrixDistance(1,10)
-		print "Posibility:", self.mymodel.transactionPossibility(1,10)
+	def set_menubar(self):
+		fileSaveAction = self.createAction("&Save as...",self.saveMatrix,QKeySequence.Save)
+		fileLoadAction = self.createAction("&Open...",self.loadMatrix,QKeySequence.Open)
+		fileMenu = self.menuBar.addMenu("&File")
+		fileMenu.addAction(fileSaveAction)
+		fileMenu.addAction(fileLoadAction)
+
+	def updateProxyModel(self):
+		self.proxyModel = {}
+		for fromcalss in self._classIDs:
+			row = {}
+			for toclass in self._classIDs:
+				tD, mD, P, C = self.mymodel.renderInformation(fromcalss,toclass)
+				# combine transparency 
+				C.setAlphaF(P)
+				
+				width = 0.7 if tD==2 else 1.4 if tD==1 else 2.0
+				distance = mD/100.0+2
+				possibility = P*100.0
+				row[toclass] = (width,distance,possibility,C)
+			self.proxyModel[fromcalss]=row
+
+
+	# def testDistance(self):
+	# 	print "Toplogical Distance:",self.mymodel.toplogicalDistance(1,10)
+	# 	print "Matrix Distance:",self.mymodel.matrixDistance(1,10)
+	# 	print "Posibility:", self.mymodel.transactionPossibility(1,10)
+	def fetchRenderInfo(self,fromclass,toclass,type):
+		try:
+			fromclass = int(fromclass)
+			toclass = int(toclass)
+		except:
+			return None
+		return self.proxyModel[fromclass][toclass][type]
+		# if isinstance(fromclass,int) and isinstance(toclass,int):
+		# 	return self.proxyModel[fromclass][toclass][type]
+		# return None
 
 	def changeModel(self):
+		self.updateProxyModel()
 		self.classDefChanged.emit()
 
 	def updateStatus(self):
@@ -56,17 +94,24 @@ class TestDlg(QDialog):
 		self.statusbar.showMessage(message)
 
 	def loadfromInitData(self): 
+		self._classIDs = []
 		rootNode = TreeNode(0,'root')
 		tempid = 100
 		for key in data:
 			parentNode = TreeNode(tempid,key,parent=rootNode)
 			for leaf in data[key]:
+				self._classIDs.append(leaf[0])
 				leafNode = TreeNode(leaf[0],leaf[1],color=leaf[2],accu=leaf[3],parent=parentNode)
 			tempid += 1
 		self.mymodel = rootNode
 
+		# self._classIDDict = {}
+		# for i in range(len(self._classIDs)):
+		# 	self._classIDDict[self._classIDs[i]]=i
 		for node in self.mymodel.children:
 			self.myscene.addItem(NodeGraphicsItem(node))
+
+		self.changeModel()
 
 	def saveMatrix(self):
 		path = '.'
@@ -98,6 +143,22 @@ class TestDlg(QDialog):
 				for node in self.mymodel.children:
 					self.myscene.addItem(NodeGraphicsItem(node))
 		self.changeModel()
+
+	def createAction(self,text,slot=None,shortcut=None,icon=None,tip=None,checkable=False):
+		action = QAction(text,self)
+		if icon:
+			action.setIcon(icon)
+		if shortcut:
+			action.setShortcut(shortcut)
+		if tip:
+			action.setToolTip(tip)
+			action.setStatusTip(tip)
+		if slot:
+			action.triggered.connect(slot)
+		if checkable:
+			action.setCheckable(True)
+		return action
+
 
 
 

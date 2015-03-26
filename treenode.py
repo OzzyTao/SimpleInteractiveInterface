@@ -1,5 +1,5 @@
 from PyQt4.QtGui import QColor
-from PyQt4.QtCore import QRectF, QPointF, QLineF
+from PyQt4.QtCore import QRectF, QPointF, QLineF, Qt
 
 class TreeNode(object):
 	"""store data for a class and manage hierarchy"""
@@ -95,4 +95,21 @@ class TreeNode(object):
 			return node1.accu * node2.accu
 		else:
 			return 1.0
+
+	def renderInformation(self,fromclass,toclass):
+		fromnode = self.findNode(fromclass)
+		tonode = self.findNode(toclass)
+		if fromnode and tonode:
+			tDistance = 0 if fromnode==tonode else 1 if fromnode.parent == tonode.parent else 2
+			mDistance = 0 if fromnode==tonode else QLineF(fromnode.pos+fromnode.parent.pos,tonode.pos+tonode.parent.pos).length()
+			possibility = fromnode.accu*tonode.accu
+			color = QColor(tonode.color)
+			color.setAlphaF(tonode.accu)
+		else:
+			tDistance =2
+			mDistance = 1000.0
+			possibility = 1.0
+			color = Qt.white
+		return (tDistance,mDistance,possibility,color)
+
 
