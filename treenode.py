@@ -23,6 +23,15 @@ class TreeNode(object):
 	# 		self.children.append(childItem)
 	# 		childItem.parent = self
 
+	def leafIDs(self):
+		if self.isLeaf():
+			return [self.classid]
+		else:
+			idgroup = []
+			for child in self.children:
+				idgroup += child.leafIDs()
+			return idgroup
+
 	def isLeaf(self):
 		if self.children:
 			return False

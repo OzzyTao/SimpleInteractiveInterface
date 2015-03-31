@@ -6,9 +6,13 @@ class NodeGraphicsItem(QGraphicsItem):
 	"""Graphics Item of a node, supporting resizing"""
 	LEAFSIZE = (30,20)
 	PARENTSIZE = (150,100)
+	FILTERSTART = 1
+	FILTEREND = 2
+
 	def __init__(self, model,parent=None):
 		super(NodeGraphicsItem, self).__init__(parent)
 		self.loadModel(model)
+		self.filterState = 0
 		self.setCursor(Qt.PointingHandCursor)
 		self.setFlags(QGraphicsItem.ItemIsSelectable | QGraphicsItem.ItemIsMovable | QGraphicsItem.ItemClipsChildrenToShape | QGraphicsItem.ItemSendsGeometryChanges)
 
@@ -46,6 +50,7 @@ class NodeGraphicsItem(QGraphicsItem):
 		
 		painter.save()
 		painter.setRenderHint(QPainter.Antialiasing,True)
+		
 		if self.isSelected():
 			pen = QPen(Qt.DashLine)
 			pen.setWidth(2)
@@ -54,13 +59,23 @@ class NodeGraphicsItem(QGraphicsItem):
 			pen = QPen(Qt.SolidLine)
 			pen.setWidth(1)
 			pen.setColor(Qt.gray)
+		
+		if self.filterState:
+			pen = QPen(Qt.DashLine)
+			pen.setWidth(1)
+			if self.filterState == NodeGraphicsItem.FILTERSTART:
+				pen.setColor(Qt.green)
+			else:
+				pen.setColor(Qt.red)
+
 		painter.setPen(pen)
 		color = QColor(self.model.color)
 		color.setAlphaF(self.model.accu)
 		painter.setBrush(QBrush(color))
 		painter.drawRoundedRect(drawingRect,5,5)
 		painter.setPen(Qt.SolidLine)
-		painter.drawText(drawingRect,str(self.model.classid),QTextOption(Qt.AlignCenter))
+		if self.model.isLeaf():
+			painter.drawText(drawingRect,str(self.model.classid),QTextOption(Qt.AlignCenter))
 		painter.restore()
 
 	def setResizeHandle(self):
@@ -139,6 +154,13 @@ class NodeGraphicsItem(QGraphicsItem):
 			self.model.pos = value if isinstance(value,QPointF) else value.toPointF()
 
 		return super(NodeGraphicsItem,self).itemChange(change,value)
+
+	def changeFilterState(self,state):
+		if state != self.filterState:
+			self.filterState = state
+			self.update()
+			self.prepareGeometryChange()
+			
 
 
 

@@ -1,10 +1,11 @@
-from PyQt4.QtGui import QDialog, QVBoxLayout, QGraphicsScene, QGraphicsView, QHBoxLayout, QPushButton, QFileDialog, QStatusBar, QAction, QMenuBar, QKeySequence
+from PyQt4.QtGui import QDialog, QVBoxLayout, QGraphicsScene, QGraphicsView, QHBoxLayout, QPushButton, QFileDialog, QStatusBar, QAction, QMenuBar, QKeySequence, QHBoxLayout, QRadioButton
 from PyQt4.QtCore import QRectF, pyqtSignal
 from data import data
 from treenode import TreeNode
 from nodegraphicsitem import NodeGraphicsItem
 import json
 from dragenabledscene import DragEnabledScene
+from doubleslider import DoubleSlider
 
 class TestDlg(QDialog):
 	"""docstring for TestDlg"""
@@ -13,20 +14,25 @@ class TestDlg(QDialog):
 		super(TestDlg, self).__init__(parent)
 		self.mymodel = None
 		self.proxyModel = []
+		self.mode = 0
+		layout = QVBoxLayout()
+
+		buttonLayout = QHBoxLayout()
+		self.defineRadio = QRadioButton("Define Change")
+		self.defineRadio.setChecked(True)
+		self.filterRadio = QRadioButton("Filter")
+		buttonLayout.addWidget(self.defineRadio)
+		buttonLayout.addWidget(self.filterRadio)
+		self.doubleSlider = DoubleSlider([1996,2001,2008,2012],False)
+		buttonLayout.addWidget(self.doubleSlider)
+		layout.addLayout(buttonLayout)
+
 		self.myscene = DragEnabledScene(QRectF(-400,-300,800,600))
 		self.myview = QGraphicsView()
 		self.myview.setScene(self.myscene)
 		self.myfile = None
-		layout = QVBoxLayout()
 		layout.addWidget(self.myview)
-		# buttonLayout = QHBoxLayout()
-		# self.savebutton = QPushButton('Save')
-		# self.loadbutton = QPushButton('Load')
-		# self.renderbutton = QPushButton('Accept')
-		# buttonLayout.addWidget(self.savebutton)
-		# buttonLayout.addWidget(self.loadbutton)
-		# buttonLayout.addWidget(self.renderbutton)
-		# layout.addLayout(buttonLayout)
+
 		self.statusbar =  QStatusBar()
 		layout.addWidget(self.statusbar)
 		self.statusbar.showMessage("Ready.",2000)
@@ -39,10 +45,21 @@ class TestDlg(QDialog):
 		# self.loadbutton.pressed.connect(self.loadMatrix)
 		self.myscene.selectionChanged.connect(self.updateStatus)
 		self.myscene.modelchanged.connect(self.changeModel)
+		self.myscene.filterSet.connect(self.updateFilter)
+		self.filterRadio.toggled.connect(self.changeMode)
 
 		# self.renderbutton.pressed.connect(self.testDistance)
 		self.setWindowTitle("Class Relation Metaphor")
 		self.loadfromInitData()
+
+	def updateFilter(self, ids):
+		split = ids.index(0)
+		startgroup = ids[0:split]
+		endgroup = ids[split+1:]
+		if startgroup and endgroup:
+			self.statusbar.showMessage("Changes from class:"+str(startgroup)+" to class:"+str(endgroup))
+		else:
+			self.statusbar.showMessage("")
 
 	def set_menubar(self):
 		fileSaveAction = self.createAction("&Save as...",self.saveMatrix,QKeySequence.Save)
@@ -158,6 +175,12 @@ class TestDlg(QDialog):
 		if checkable:
 			action.setCheckable(True)
 		return action
+
+	def changeMode(self):
+		if self.filterRadio.isChecked():
+			self.myscene.setFilterMode(1)
+		else:
+			self.myscene.setFilterMode(0)
 
 
 
